@@ -1,0 +1,41 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'cuaklabs-turbocuak-daemon'",
+            "program": "${workspaceFolder}/target/debug/cuaklabs-turbocuak-daemon",
+            "args": [
+                "--root-directory",
+                "${workspaceFolder}"
+            ],
+            "cwd": "${workspaceFolder}",
+            "sourceLanguages": ["rust"],
+            "stopOnEntry": false,
+            "terminal": "external"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'cuaklabs-turbocuak-daemon'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=cuaklabs-turbocuak-daemon",
+                    "--package=cuaklabs-turbocuak-daemon"
+                ],
+                "filter": {
+                    "name": "cuaklabs-turbocuak-daemon",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

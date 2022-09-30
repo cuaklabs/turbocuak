@@ -1,0 +1,29 @@
+{
+  "$id": "https://turbocuak.virtual/schemas/package/task/schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "dependsOn": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "inputFiles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "name": {
+      "type": "string"
+    },
+    "options": {
+      "type": "object"
+    },
+    "runner": {
+      "type": "string"
+    }
+  },
+  "required": ["name"]
+}

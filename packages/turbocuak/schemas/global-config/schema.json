@@ -1,0 +1,14 @@
+{
+  "$id": "https://turbocuak.virtual/schemas/global-config/schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "packageDirectories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": ["packageDirectories"]
+}

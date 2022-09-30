@@ -1,0 +1,15 @@
+[package]
+name = "cuaklabs-turbocuak-daemon"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4"
+async-trait = "0.1.57"
+clap = { version = "3.2", features = ["derive"]}
+env_logger = "0.9.1"
+futures = "0.3"
+notify = "5.0.0"
+log = "0.4.17"
+serde = { version = "1.0.144", features = ["derive"] }
+serde_json = { version = "1.0.85", features = ["raw_value"] }

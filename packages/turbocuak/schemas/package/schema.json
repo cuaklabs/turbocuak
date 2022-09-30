@@ -1,0 +1,19 @@
+{
+  "$id": "https://turbocuak.virtual/schemas/package/schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "root": {
+      "type": "string"
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "$ref": "task/schema.json"
+      }
+    }
+  }
+}
