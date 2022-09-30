@@ -45,7 +45,13 @@ async fn main() -> Result<()> {
     mut stopwatch,
   ) = (&mut watch_file_system_port as & mut dyn WatchFileSystemPort).prepare()?;
 
-  let (watch_result, unwatch_result) = join!(watch.watch(), stopwatch.unwatch());
+  let (
+    watch_result,
+    unwatch_result,
+  ) = join!(
+    watch.watch(),
+    stopwatch.unwatch(),
+  );
 
   watch_result?;
   unwatch_result?;

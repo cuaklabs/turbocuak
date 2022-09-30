@@ -24,7 +24,11 @@ fn create_monorepo_state_interaction(
     let package_path_to_state_map: collections::HashMap<path::PathBuf, PackageState> =
       package_states_to_package_path_to_state_map(package_states);
 
-    let monorepo_state: MonorepoState = MonorepoState::new(global_config, package_path_to_state_map, root_directory);
+    let monorepo_state: MonorepoState = MonorepoState::new(
+      global_config,
+      package_path_to_state_map,
+      root_directory,
+    );
 
     Ok(monorepo_state)
   }
