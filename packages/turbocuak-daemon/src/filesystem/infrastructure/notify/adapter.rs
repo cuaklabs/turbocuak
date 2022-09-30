@@ -15,7 +15,11 @@ use notify::{
 use notify::inotify::INotifyWatcher;
 
 use crate::common::domain::model::Result;
-use crate::filesystem::domain::port::{WatchFileSystemPort, WatchFileSystenPortStopwatch};
+use crate::filesystem::domain::port::{
+  WatchFileSystemPort,
+  WatchFileSystenPortStopwatch,
+  WatchFileSystenPortWatch
+};
 
 pub trait WatchFileSystemErrCallback: Fn(NotifyError) -> () {}
 
@@ -40,10 +44,77 @@ struct WatchFileSystenAdapterStopwatch {
   channel_sender: Sender<WatchConsumerMessage>
 }
 
+impl WatchFileSystenAdapterStopwatch {
+  pub fn new(channel_sender: Sender<WatchConsumerMessage>) -> Self {
+    Self { channel_sender }
+  }
+}
+
 #[async_trait]
 impl WatchFileSystenPortStopwatch for WatchFileSystenAdapterStopwatch {
   async fn unwatch(&mut self) -> Result<()> {
     self.channel_sender.send(WatchConsumerMessage::Unwatch()).await.unwrap();
+
+    Ok(())
+  }
+}
+
+struct WatchFileSystenAdapterWatch<'a, TOkFn, TErrFn>
+  where
+  TOkFn: WatchFileSystemOkCallback + ?Sized,
+  TErrFn: WatchFileSystemErrCallback + ?Sized,
+{
+  channel_consumer: Receiver<WatchConsumerMessage>,
+  err_callback: &'a TErrFn,
+  ok_callback: &'a TOkFn,
+  path: &'a path::PathBuf,
+  recursive_mode: RecursiveMode,
+  watcher: INotifyWatcher,
+}
+
+impl<'a, TOkFn, TErrFn> WatchFileSystenAdapterWatch<'a, TOkFn, TErrFn>
+  where
+    TOkFn: WatchFileSystemOkCallback + ?Sized,
+    TErrFn: WatchFileSystemErrCallback + ?Sized,
+{
+  pub fn new(
+    channel_consumer: Receiver<WatchConsumerMessage>,
+    err_callback: &'a TErrFn,
+    ok_callback: &'a TOkFn,
+    path: &'a path::PathBuf,
+    recursive_mode: RecursiveMode,
+    watcher: INotifyWatcher,
+  ) -> Self {
+    Self {
+      channel_consumer,
+      err_callback,
+      ok_callback,
+      path,
+      recursive_mode,
+      watcher
+    }
+  }
+}
+
+#[async_trait]
+impl<'a, TOkFn, TErrFn> WatchFileSystenPortWatch for WatchFileSystenAdapterWatch<'a, TOkFn, TErrFn>
+where
+  TOkFn: WatchFileSystemOkCallback + ?Sized + std::marker::Sync,
+  TErrFn: WatchFileSystemErrCallback + ?Sized + std::marker::Sync,
+{
+  async fn watch(&mut self) -> Result<()> {
+    self.watcher.watch(self.path, self.recursive_mode)?;
+
+    while let Some(res) = self.channel_consumer.next().await {
+      match res {
+        WatchConsumerMessage::EventResult(Ok(event)) => (self.ok_callback)(event),
+        WatchConsumerMessage::EventResult(Err(error)) => (self.err_callback)(error),
+        WatchConsumerMessage::Unwatch() => { 
+          self.watcher.unwatch(self.path)?;
+          break;
+        }
+      }
+    }
 
     Ok(())
   }
@@ -59,7 +130,6 @@ pub struct WatchFileSystemNotifyAdapter<'a, TOkFn, TErrFn>
   is_recursive: bool,
   ok_callback: &'a TOkFn,
   path: path::PathBuf,
-  watcher: Option<INotifyWatcher>
 }
 
 impl<'a, TOkFn, TErrFn> WatchFileSystemNotifyAdapter<'a, TOkFn, TErrFn>
@@ -79,33 +149,41 @@ impl<'a, TOkFn, TErrFn> WatchFileSystemNotifyAdapter<'a, TOkFn, TErrFn>
       is_recursive,
       ok_callback,
       path,
-      watcher: None,
     }
   }
 
-  fn build_async_watcher() -> notify::Result<(RecommendedWatcher, Receiver<notify::Result<Event>>)> {
-    let (mut event_channel_producer, event_channel_consumer) = channel(1);
+  fn build_async_watcher() -> notify::Result<
+    (RecommendedWatcher, Sender<WatchConsumerMessage>, Receiver<WatchConsumerMessage>
+  )> {
+    let (mut channel_watcher_producer, channel_consumer) = channel(1);
+
+    let channel_stopwatch_producer = channel_watcher_producer.clone();
 
     let watcher = RecommendedWatcher::new(move |res| {
       futures::executor::block_on(async {
-        event_channel_producer.send(res).await.unwrap();
+        channel_watcher_producer.send(WatchConsumerMessage::EventResult(res)).await.unwrap();
       })
     }, Config::default())?;
   
-    Ok((watcher, event_channel_consumer))
+    Ok((watcher, channel_stopwatch_producer, channel_consumer))
   }
 }
 
-#[async_trait]
-impl<'a, TOkFn, TErrFn> WatchFileSystemPort<> for WatchFileSystemNotifyAdapter<'a, TOkFn, TErrFn>
+impl<'a, TOkFn, TErrFn> WatchFileSystemPort for WatchFileSystemNotifyAdapter<'a, TOkFn, TErrFn>
   where
   TOkFn: WatchFileSystemOkCallback + ?Sized + std::marker::Sync,
   TErrFn: WatchFileSystemErrCallback + ?Sized + std::marker::Sync,
 {
-  async fn watch(&mut self) -> Result<Box<dyn WatchFileSystenPortStopwatch>> {
+  fn prepare(&mut self) -> Result<
+    (Box<dyn WatchFileSystenPortWatch + '_>, Box<dyn WatchFileSystenPortStopwatch + '_>)
+  > {
     self.is_active = true;
 
-    let (mut watcher, mut event_channel_consumer) = Self::build_async_watcher()?;
+    let (
+      mut watcher,
+      channel_stopwatch_producer,
+      channel_consumer,
+    ) = Self::build_async_watcher()?;
 
     let recursive_mode: RecursiveMode =
       if self.is_recursive {
@@ -116,19 +194,25 @@ impl<'a, TOkFn, TErrFn> WatchFileSystemPort<> for WatchFileSystemNotifyAdapter<'
 
     watcher.watch(self.path.as_ref(), recursive_mode)?;
 
-    self.watcher = Some(watcher);
+    let watch_box: Box<dyn WatchFileSystenPortWatch> = Box::new(
+      WatchFileSystenAdapterWatch::new(
+        channel_consumer,
+        &self.err_callback,
+        &self.ok_callback,
+        &self.path,
+        recursive_mode,
+        watcher,
+      ),
+    );
+    let unwatch_box: Box<dyn WatchFileSystenPortStopwatch> = Box::new(
+      WatchFileSystenAdapterStopwatch::new(channel_stopwatch_producer),
+    );
 
-    while let Some(res) = event_channel_consumer.next().await {
-      if self.is_active {
-        match res {
-          Ok(event) => (self.ok_callback)(event),
-          Err(error) => (self.err_callback)(error),
-        }
-      } else {
-        break;
-      }
-    }
+    let result_tuple = (
+      watch_box,
+      unwatch_box,
+    );
 
-    Ok(())
+    Ok(result_tuple)
   }
 }

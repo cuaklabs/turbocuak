@@ -4,6 +4,7 @@ extern crate log;
 use clap::Parser;
 use filesystem::domain::port::WatchFileSystemPort;
 use filesystem::infrastructure::notify::adapter::{WatchFileSystemNotifyAdapter, WatchFileSystemOkCallback, WatchFileSystemErrCallback};
+use futures::join;
 use notify::Error as NotifyError;
 
 use common::domain::model::Result;
@@ -39,9 +40,15 @@ async fn main() -> Result<()> {
       monorepo_state.root_directory,
     );
 
-  (&mut watch_file_system_port as & mut dyn WatchFileSystemPort).watch().await?;
+  let (
+    mut watch,
+    mut stopwatch,
+  ) = (&mut watch_file_system_port as & mut dyn WatchFileSystemPort).prepare()?;
 
-  (&mut watch_file_system_port as & mut dyn WatchFileSystemPort).unwatch()?;
+  let (watch_result, unwatch_result) = join!(watch.watch(), stopwatch.unwatch());
+
+  watch_result?;
+  unwatch_result?;
 
   Ok(())
 }
