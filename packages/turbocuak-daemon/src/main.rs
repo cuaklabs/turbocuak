@@ -5,11 +5,11 @@ use clap::Parser;
 use filesystem::domain::port::WatchFileSystemPort;
 use filesystem::infrastructure::notify::adapter::{WatchFileSystemNotifyAdapter, WatchFileSystemOkCallback, WatchFileSystemErrCallback};
 use futures::join;
+use monorepo_state::application::command_handler::monorepo_state_process_command_handler;
 use notify::Error as NotifyError;
 
 use common::domain::model::Result;
 use monorepo_state::domain::model::MonorepoState;
-use monorepo_state::monorepo_state_build::monorepo_state_build;
 use notify::Event;
 
 mod common;
@@ -27,7 +27,7 @@ struct CliArgs {
 async fn main() -> Result<()> {
   let cli: CliArgs = CliArgs::parse();
 
-  let monorepo_state: MonorepoState = monorepo_state_build(cli.root_directory)?;
+  let monorepo_state: MonorepoState = monorepo_state_process_command_handler(cli.root_directory)?;
 
   let mut watch_file_system_port: WatchFileSystemNotifyAdapter<
     dyn WatchFileSystemOkCallback + std::marker::Sync,
@@ -47,14 +47,14 @@ async fn main() -> Result<()> {
 
   let (
     watch_result,
-    unwatch_result,
+    //unwatch_result,
   ) = join!(
     watch.watch(),
-    stopwatch.unwatch(),
+    //stopwatch.unwatch(),
   );
 
   watch_result?;
-  unwatch_result?;
+  //unwatch_result?;
 
   Ok(())
 }

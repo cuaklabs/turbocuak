@@ -9,10 +9,10 @@ use crate::config::domain::model::{GlobalConfig, PackageConfig};
 use crate::config::domain::port::{ParseGlobalConfigPortFn, ParsePackageConfigPortFn};
 use crate::config::infrastructure::serde_json::build::{global_config_build, package_config_build};
 
-fn parse_global_config_adapt_generator<TPath: AsRef<path::Path>>(
+fn parse_global_config_adapt_generator<TPathRef: AsRef<path::Path>>(
   global_config_build: impl BuildFn<String, GlobalConfig>
-) -> impl ParseGlobalConfigPortFn<TPath> {
-  move |root_path: TPath| -> Result<GlobalConfig> {
+) -> impl ParseGlobalConfigPortFn<TPathRef> {
+  move |root_path: TPathRef| -> Result<GlobalConfig> {
     let root_canonical_path: path::PathBuf = fs::canonicalize(root_path)?;
     let global_config_path: path::PathBuf = root_canonical_path.join(GLOBAL_CONFIG_FILE_NAME);
 
@@ -29,14 +29,14 @@ fn parse_global_config_adapt_generator<TPath: AsRef<path::Path>>(
   }
 }
 
-pub fn parse_global_config_adapt<TPath: AsRef<path::Path>>(root_path: TPath) -> Result<GlobalConfig> {
+pub fn parse_global_config_adapt<TPathRef: AsRef<path::Path>>(root_path: TPathRef) -> Result<GlobalConfig> {
   parse_global_config_adapt_generator(global_config_build)(root_path)
 }
 
-fn parse_package_config_adapt_generator<TPath: AsRef<path::Path>>(
+fn parse_package_config_adapt_generator<TPathRef: AsRef<path::Path>>(
   package_config_build: impl BuildFn<String, PackageConfig>
-) -> impl ParsePackageConfigPortFn<TPath> {
-  move |root_path: TPath| -> Result<PackageConfig> {
+) -> impl ParsePackageConfigPortFn<TPathRef> {
+  move |root_path: TPathRef| -> Result<PackageConfig> {
     let root_canonical_path: path::PathBuf = fs::canonicalize(root_path)?;
     let package_config_path: path::PathBuf = root_canonical_path.join(PACKAGE_CONFIG_FILE_NAME);
 
@@ -53,6 +53,6 @@ fn parse_package_config_adapt_generator<TPath: AsRef<path::Path>>(
   }
 }
 
-pub fn parse_package_config_adapt<TPath: AsRef<path::Path>>(root_path: TPath) -> Result<PackageConfig> {
+pub fn parse_package_config_adapt<TPathRef: AsRef<path::Path>>(root_path: TPathRef) -> Result<PackageConfig> {
   parse_package_config_adapt_generator(package_config_build)(root_path)
 }

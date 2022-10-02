@@ -5,10 +5,17 @@ use crate::common::domain::model::Result;
 use crate::common::domain::action::{InteractionFn, BuildFn};
 use crate::config::domain::model::{GlobalConfig, PackageConfig};
 use crate::monorepo_state::domain::model::{MonorepoState, PackageState};
+use crate::monorepo_state::domain::build::package_state_build;
 
 pub type MonorepoStateCreateCommand = (GlobalConfig, Vec<PackageConfig>, path::PathBuf);
 
-fn create_monorepo_state_interaction(
+pub fn create_monorepo_state_interaction((global_config, package_configs, root_directory): MonorepoStateCreateCommand) -> Result<MonorepoState> {
+  create_monorepo_state_interaction_generator(&package_state_build)(
+    (global_config, package_configs, root_directory)
+  )
+}
+
+fn create_monorepo_state_interaction_generator(
   package_state_build: &impl BuildFn<PackageConfig, PackageState>
 ) -> impl InteractionFn<MonorepoStateCreateCommand, MonorepoState> + '_ {
   move |(global_config, package_configs, root_directory): MonorepoStateCreateCommand| -> Result<MonorepoState> {

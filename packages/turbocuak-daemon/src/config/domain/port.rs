@@ -3,20 +3,20 @@ use std::path::Path;
 use crate::common::domain::model::Result;
 use crate::config::domain::model::{GlobalConfig, PackageConfig};
 
-pub trait ParseGlobalConfigPortFn<TPath>: Fn(TPath) -> Result<GlobalConfig> where TPath: AsRef<Path> {}
+pub trait ParseGlobalConfigPortFn<TPathRef>: Fn(TPathRef) -> Result<GlobalConfig> where TPathRef: AsRef<Path> {}
 
-impl<T, TPath>
-  ParseGlobalConfigPortFn<TPath>
+impl<T, TPathRef>
+  ParseGlobalConfigPortFn<TPathRef>
   for T
   where
-    TPath: AsRef<Path>,
-    T : Fn(TPath) -> Result<GlobalConfig> {}
+    TPathRef: AsRef<Path>,
+    T : Fn(TPathRef) -> Result<GlobalConfig> {}
 
-pub trait ParsePackageConfigPortFn<TPath>: Fn(TPath) -> Result<PackageConfig> where TPath: AsRef<Path> {}
+pub trait ParsePackageConfigPortFn<TPathRef>: Fn(TPathRef) -> Result<PackageConfig> where TPathRef: AsRef<Path> {}
 
-impl<T, TPath>
-  ParsePackageConfigPortFn<TPath>
+impl<T, TPathRef>
+  ParsePackageConfigPortFn<TPathRef>
   for T
   where
-    TPath: AsRef<Path>,
-    T : Fn(TPath) -> Result<PackageConfig> {}
+    TPathRef: AsRef<Path>,
+    T : Fn(TPathRef) -> Result<PackageConfig> {}
