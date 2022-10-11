@@ -27,7 +27,15 @@ struct CliArgs {
 async fn main() -> Result<()> {
   let cli: CliArgs = CliArgs::parse();
 
-  let monorepo_state: MonorepoState = monorepo_state_process_command_handler(cli.root_directory)?;
+  let monorepo_state: MonorepoState =
+    monorepo_state_process_command_handler(&cli.root_directory)
+      .unwrap()
+      .monorepo_state
+      .lock()
+      .unwrap()
+      .take()
+      .unwrap()
+  ;
 
   let mut watch_file_system_port: WatchFileSystemNotifyAdapter<
     dyn WatchFileSystemOkCallback + std::marker::Sync,

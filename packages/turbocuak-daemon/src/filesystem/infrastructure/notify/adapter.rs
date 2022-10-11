@@ -126,7 +126,6 @@ pub struct WatchFileSystemNotifyAdapter<'a, TOkFn, TErrFn>
     TErrFn: WatchFileSystemErrCallback + ?Sized,
 {
   err_callback: &'a TErrFn,
-  is_active: bool,
   is_recursive: bool,
   ok_callback: &'a TOkFn,
   path: path::PathBuf,
@@ -145,7 +144,6 @@ impl<'a, TOkFn, TErrFn> WatchFileSystemNotifyAdapter<'a, TOkFn, TErrFn>
   ) -> Self {
     Self {
       err_callback,
-      is_active: false,
       is_recursive,
       ok_callback,
       path,
@@ -177,8 +175,6 @@ impl<'a, TOkFn, TErrFn> WatchFileSystemPort for WatchFileSystemNotifyAdapter<'a,
   fn prepare(&mut self) -> Result<
     (Box<dyn WatchFileSystenPortWatch + '_>, Box<dyn WatchFileSystenPortStopwatch + '_>)
   > {
-    self.is_active = true;
-
     let (
       mut watcher,
       channel_stopwatch_producer,
